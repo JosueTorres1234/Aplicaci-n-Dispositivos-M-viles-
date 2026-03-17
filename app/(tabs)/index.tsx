@@ -1,164 +1,142 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  Image,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+  Image, RefreshControl, SafeAreaView, ScrollView,
+  StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View
 } from 'react-native';
 
-// Datos de ejemplo con imágenes reales de One Piece
-const MANGAS = [
-  {
-    id: 1,
-    title: 'One Piece',
-    imageUri: 'https://cdn.myanimelist.net/images/manga/2/253146.jpg',
-    progress: 75,
-    chapters: 1089,
-    rating: 4.8,
-    status: 'En emisión'
-  },
-  {
-    id: 2,
-    title: 'Naruto',
-    imageUri: 'https://cdn.myanimelist.net/images/manga/3/117051.jpg',
-    progress: 100,
-    chapters: 700,
-    rating: 4.9,
-    status: 'Completado'
-  },
-  {
-    id: 3,
-    title: 'Jujutsu Kaisen',
-    imageUri: 'https://cdn.myanimelist.net/images/manga/3/222287.jpg',
-    progress: 30,
-    chapters: 200,
-    rating: 4.7,
-    status: 'En emisión'
-  },
-  {
-    id: 4,
-    title: 'Dragon Ball Super',
-    imageUri: 'https://cdn.myanimelist.net/images/manga/2/214853.jpg',
-    progress: 45,
-    chapters: 150,
-    rating: 4.6,
-    status: 'En emisión'
-  },
-  {
-    id: 5,
-    title: 'Attack on Titan',
-    imageUri: 'https://cdn.myanimelist.net/images/manga/2/185533.jpg',
-    progress: 90,
-    chapters: 139,
-    rating: 4.9,
-    status: 'Finalizado'
-  }
-];
+// Importaciones de Firebase
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebaseConfig'; // Ajustado a tu estructura
+
+// 1. Interfaz de datos
+interface Manga {
+  id: string;
+  titulo: string;
+  imagen: string;
+  progreso: number;
+  status?: string;
+}
+
+const COLORS = {
+  background: '#121212',
+  cardBg: '#1E1E1E',
+  accent: '#FF4500',
+  textMain: '#FFFFFF',
+  textSec: '#AAAAAA',
+  border: '#333333'
+};
 
 export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [mangas, setMangas] = useState<Manga[]>([]);
 
-  const handleCardPress = (manga: typeof MANGAS[0]) => {
-    console.log(`Abriendo detalles de ${manga.title}`);
-  };
+  // 2. Lógica de conexión real a Firebase
+  useEffect(() => {
+    console.log("Conectando a Firebase...");
+    const unsub = onSnapshot(collection(db, 'mangas'), (snapshot) => {
+      const data = snapshot.docs.map(doc => {
+        const fData = doc.data();
+        
+        // MAPEADO CRÍTICO: Firebase (Mayúscula) -> Código (minúscula)
+        return {
+          id: doc.id,
+          titulo: fData.Titulo || 'Sin título',   //
+          imagen: fData.Imagen || 'https://via.placeholder.com/150', //
+          progreso: Number(fData.Progreso) || 0, //
+          status: fData.Status || 'En emisión'
+        } as Manga;
+      });
+      
+      console.log("Mangas cargados:", data.length);
+      setMangas(data);
+    });
+
+    return () => unsub();
+  }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 2000);
+    setTimeout(() => setRefreshing(false), 1500);
   };
 
-  const filteredMangas = MANGAS.filter(manga =>
-    manga.title.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredMangas = mangas.filter(manga =>
+    manga.titulo?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const stats = {
-    total: MANGAS.length,
-    reading: MANGAS.filter(m => m.progress < 100).length,
-    completed: MANGAS.filter(m => m.progress === 100).length
+    total: mangas.length,
+    reading: mangas.filter(m => m.progreso < 100).length,
+    completed: mangas.filter(m => m.progreso === 100).length
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header personalizado */}
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      
+      {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>¡Bienvenido!</Text>
-          <Text style={styles.date}>{new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
+          <Text style={styles.greeting}>Tachiyomi</Text>
+          <Text style={styles.date}>
+            {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </Text>
         </View>
-        <View style={styles.headerIcons}>
-          <Ionicons name="notifications-outline" size={24} color="#FF4500" />
-        </View>
+        <TouchableOpacity style={styles.headerIcons}>
+          <Ionicons name="notifications-outline" size={24} color={COLORS.accent} />
+        </TouchableOpacity>
       </View>
 
-      {/* Barra de búsqueda */}
+      {/* Buscador */}
       <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#888" style={styles.searchIcon} />
+        <Ionicons name="search" size={20} color={COLORS.textSec} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Buscar mangas..."
-          placeholderTextColor="#888"
+          placeholder="Buscar en mi biblioteca..."
+          placeholderTextColor={COLORS.textSec}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
       </View>
 
-      {/* Estadísticas rápidas */}
-      <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{stats.total}</Text>
-          <Text style={styles.statLabel}>Total</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{stats.reading}</Text>
-          <Text style={styles.statLabel}>Leyendo</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{stats.completed}</Text>
-          <Text style={styles.statLabel}>Completados</Text>
-        </View>
-      </View>
-
       <ScrollView 
-        style={styles.content} 
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.accent} />
         }
       >
-        {/* Sección de continuación */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Continuar leyendo</Text>
-            <Text style={styles.seeAll}>Ver todos</Text>
+        {/* Estadísticas */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>{stats.total}</Text>
+            <Text style={styles.statLabel}>Total</Text>
           </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>{stats.reading}</Text>
+            <Text style={styles.statLabel}>Leyendo</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>{stats.completed}</Text>
+            <Text style={styles.statLabel}>Listo</Text>
+          </View>
+        </View>
+
+        {/* Sección Horizontal */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Continuar leyendo</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-            {filteredMangas.slice(0, 3).map((manga) => (
-              <TouchableOpacity 
-                key={manga.id} 
-                style={styles.horizontalCard}
-                onPress={() => handleCardPress(manga)}
-                activeOpacity={0.7}
-              >
+            {filteredMangas.map((manga) => (
+              <TouchableOpacity key={manga.id} style={styles.horizontalCard} activeOpacity={0.8}>
                 <Image 
-                  source={{ uri: manga.imageUri }} 
-                  style={styles.horizontalImage}
-                  onError={() => console.log(`Error cargando imagen de ${manga.title}`)}
+                  source={{ uri: manga.imagen }} 
+                  style={styles.horizontalImage} 
+                  resizeMode="cover" // Importante para que se vea la imagen
                 />
                 <View style={styles.horizontalInfo}>
-                  <Text style={styles.horizontalTitle} numberOfLines={2}>{manga.title}</Text>
-                  <View style={styles.progressContainer}>
-                    <View style={styles.progressBar}>
-                      <View style={[styles.progressFill, { width: `${manga.progress}%` }]} />
-                    </View>
-                    <Text style={styles.progressText}>{manga.progress}%</Text>
+                  <Text style={styles.horizontalTitle} numberOfLines={1}>{manga.titulo}</Text>
+                  <View style={styles.progressBar}>
+                    <View style={[styles.progressFill, { width: `${manga.progreso}%` }]} />
                   </View>
                 </View>
               </TouchableOpacity>
@@ -166,286 +144,64 @@ export default function HomeScreen() {
           </ScrollView>
         </View>
 
-        {/* Sección de populares */}
+        {/* Sección Vertical */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Mangas Populares</Text>
-            <Text style={styles.seeAll}>Ver todos</Text>
-          </View>
-          <Text style={styles.sectionSubtitle}>Los más leídos de la semana</Text>
-          
+          <Text style={styles.sectionTitle}>Mi Biblioteca</Text>
           {filteredMangas.map((manga) => (
-            <TouchableOpacity 
-              key={manga.id} 
-              style={styles.card}
-              onPress={() => handleCardPress(manga)}
-              activeOpacity={0.7}
-            >
-              <Image source={{ uri: manga.imageUri }} style={styles.cardImage} />
+            <TouchableOpacity key={manga.id} style={styles.card} activeOpacity={0.7}>
+              <Image 
+                source={{ uri: manga.imagen }} 
+                style={styles.cardImage} 
+                resizeMode="cover"
+              />
               <View style={styles.cardInfo}>
-                <Text style={styles.cardTitle}>{manga.title}</Text>
-                
-                <View style={styles.detailsRow}>
-                  <View style={styles.detailItem}>
-                    <Ionicons name="star" size={14} color="#FFD700" />
-                    <Text style={styles.detailText}>{manga.rating.toFixed(1)}</Text>
-                  </View>
-                  <View style={styles.detailItem}>
-                    <Ionicons name="book-outline" size={14} color="#888" />
-                    <Text style={styles.detailText}>{manga.chapters} caps</Text>
-                  </View>
-                  <View style={[styles.statusBadge, 
-                    manga.status === 'Completado' ? styles.statusCompleted : 
-                    manga.status === 'Finalizado' ? styles.statusFinished : 
-                    styles.statusOngoing
-                  ]}>
-                    <Text style={styles.statusText}>{manga.status}</Text>
-                  </View>
-                </View>
-                
-                <View style={styles.progressContainer}>
+                <Text style={styles.cardTitle}>{manga.titulo}</Text>
+                <Text style={styles.cardSub}>{manga.status}</Text>
+                <View style={styles.progressRow}>
                   <View style={styles.progressBar}>
-                    <View style={[styles.progressFill, { width: `${manga.progress}%` }]} />
+                    <View style={[styles.progressFill, { width: `${manga.progreso}%` }]} />
                   </View>
-                  <Text style={styles.progressText}>{manga.progress}%</Text>
+                  <Text style={styles.progressText}>{manga.progreso}%</Text>
                 </View>
               </View>
-              <Ionicons name="chevron-forward" size={24} color="#FF4500" />
+              <Ionicons name="chevron-forward" size={20} color={COLORS.accent} />
             </TouchableOpacity>
           ))}
         </View>
 
-        <View style={styles.bottomSpace} />
+        <View style={{ height: 100 }} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f8f8',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
-    backgroundColor: 'white',
-  },
-  greeting: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  date: {
-    fontSize: 14,
-    color: '#888',
-    marginTop: 4,
-    textTransform: 'capitalize',
-  },
-  headerIcons: {
-    flexDirection: 'row',
-    gap: 15,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    marginHorizontal: 20,
-    marginVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#eee',
-  },
-  searchIcon: {
-    marginRight: 10,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#333',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  statCard: {
-    backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 12,
-    alignItems: 'center',
-    minWidth: 100,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FF4500',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 4,
-  },
-  content: {
-    flex: 1,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 8,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  seeAll: {
-    fontSize: 14,
-    color: '#FF4500',
-    fontWeight: '600',
-  },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: '#888',
-    marginBottom: 12,
-    paddingHorizontal: 20,
-  },
-  horizontalScroll: {
-    paddingLeft: 20,
-  },
-  horizontalCard: {
-    width: 160,
-    marginRight: 12,
-    backgroundColor: 'white',
-    borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  horizontalImage: {
-    width: '100%',
-    height: 120,
-    resizeMode: 'cover',
-  },
-  horizontalInfo: {
-    padding: 10,
-  },
-  horizontalTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 6,
-  },
-  card: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    marginHorizontal: 16,
-    marginVertical: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-  },
-  cardImage: {
-    width: 60,
-    height: 90,
-    borderRadius: 8,
-    resizeMode: 'cover',
-  },
-  cardInfo: {
-    flex: 1,
-    marginLeft: 12,
-    marginRight: 8,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 6,
-  },
-  detailsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 8,
-  },
-  detailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  detailText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  statusCompleted: {
-    backgroundColor: '#4CAF50',
-  },
-  statusFinished: {
-    backgroundColor: '#9C27B0',
-  },
-  statusOngoing: {
-    backgroundColor: '#FF9800',
-  },
-  statusText: {
-    fontSize: 10,
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  progressContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  progressBar: {
-    flex: 1,
-    height: 6,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#FF4500',
-    borderRadius: 3,
-  },
-  progressText: {
-    fontSize: 12,
-    color: '#FF4500',
-    fontWeight: '600',
-    minWidth: 40,
-  },
-  bottomSpace: {
-    height: 20,
-  },
+  container: { flex: 1, backgroundColor: COLORS.background },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 40 },
+  greeting: { fontSize: 28, fontWeight: 'bold', color: COLORS.accent },
+  date: { fontSize: 14, color: COLORS.textSec, textTransform: 'capitalize' },
+  headerIcons: { backgroundColor: COLORS.cardBg, padding: 10, borderRadius: 12 },
+  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.cardBg, marginHorizontal: 20, paddingHorizontal: 15, borderRadius: 12, marginBottom: 20 },
+  searchIcon: { marginRight: 10 },
+  searchInput: { flex: 1, paddingVertical: 12, color: COLORS.textMain, fontSize: 16 },
+  statsContainer: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 25 },
+  statCard: { backgroundColor: COLORS.cardBg, padding: 15, borderRadius: 15, alignItems: 'center', width: '30%', borderWidth: 1, borderColor: COLORS.border },
+  statNumber: { fontSize: 20, fontWeight: 'bold', color: COLORS.textMain },
+  statLabel: { fontSize: 11, color: COLORS.textSec, marginTop: 4, textTransform: 'uppercase' },
+  section: { marginBottom: 30 },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.textMain, marginLeft: 20, marginBottom: 15 },
+  horizontalScroll: { paddingLeft: 20 },
+  horizontalCard: { width: 140, marginRight: 15, backgroundColor: COLORS.cardBg, borderRadius: 15, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border },
+  horizontalImage: { width: '100%', height: 190, backgroundColor: '#333' }, // Fondo gris mientras carga
+  horizontalInfo: { padding: 10 },
+  horizontalTitle: { color: COLORS.textMain, fontWeight: 'bold', fontSize: 13, marginBottom: 8 },
+  card: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.cardBg, marginHorizontal: 20, marginBottom: 12, padding: 10, borderRadius: 15, borderWidth: 1, borderColor: COLORS.border },
+  cardImage: { width: 60, height: 80, borderRadius: 10, backgroundColor: '#333' },
+  cardInfo: { flex: 1, marginLeft: 15, marginRight: 10 },
+  cardTitle: { fontSize: 16, fontWeight: 'bold', color: COLORS.textMain },
+  cardSub: { fontSize: 12, color: COLORS.accent, marginTop: 2, marginBottom: 8 },
+  progressRow: { flexDirection: 'row', alignItems: 'center' },
+  progressBar: { flex: 1, height: 4, backgroundColor: COLORS.border, borderRadius: 2 },
+  progressFill: { height: '100%', backgroundColor: COLORS.accent, borderRadius: 2 },
+  progressText: { fontSize: 11, color: COLORS.textSec, marginLeft: 8 },
 });
