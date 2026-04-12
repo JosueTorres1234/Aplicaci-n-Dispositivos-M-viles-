@@ -1,18 +1,20 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 
-// Datos de tu proyecto TachiyomiApp de la consola de Firebase
 const firebaseConfig = {
-  apiKey: "TU_API_KEY",
+  apiKey: "AIzaSyDPxgn4hRekJY1WNKj3GDec3hyuU2JlUQ",
   authDomain: "tachiyomiapp-ab03e.firebaseapp.com",
   projectId: "tachiyomiapp-ab03e",
-  storageBucket: "tachiyomiapp-ab03e.appspot.com",
-  messagingSenderId: "TU_SENDER_ID",
-  appId: "TU_APP_ID"
+  storageBucket: "tachiyomiapp-ab03e.firebasestorage.app",
+  messagingSenderId: "567941890555",
+  appId: "1:567941890555:web:c8627565b4809e8972cb5e",
+  measurementId: "G-QJN6ST9G9S"
 };
 
-// Inicializamos la aplicación
+// Inicializamos Firebase
 const app = initializeApp(firebaseConfig);
 
-// Exportamos la base de datos con el nombre 'db'
+// Exportamos los servicios para usarlos en la App
 export const db = getFirestore(app);
+export const auth = getAuth(app);
