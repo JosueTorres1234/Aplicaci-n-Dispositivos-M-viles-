@@ -266,3 +266,5 @@ const styles = StyleSheet.create({
   gridCard: { width: (width / 2) - 20, margin: 10 },
   gridImage: { width: '100%', height: 220, borderRadius: 10 }
 });
+
+// Actualización de variables
