@@ -1,20 +1,20 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import { getAuth, browserLocalPersistence, setPersistence } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDPxgn4hRekJY1WNKj3GDec3hyuU2JlUQ",
+  apiKey: "AIzaSyBPsgn44hReKJY1WNKj3GDsc3hyuU2JlUQ", // La llave nueva que sacamos
   authDomain: "tachiyomiapp-ab03e.firebaseapp.com",
   projectId: "tachiyomiapp-ab03e",
   storageBucket: "tachiyomiapp-ab03e.firebasestorage.app",
   messagingSenderId: "567941890555",
   appId: "1:567941890555:web:c8627565b4809e8972cb5e",
-  measurementId: "G-QJN6ST9G9S"
+  measurementId: "G-QJNKST9G9S"
 };
 
-// Inicializamos Firebase
 const app = initializeApp(firebaseConfig);
-
-// Exportamos los servicios para usarlos en la App
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+
+// Forzamos a que la sesión se guarde en el navegador
+setPersistence(auth, browserLocalPersistence);
