@@ -1,19 +1,32 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
-import { Ionicons } from '@expo/vector-icons'; // Viene por defecto en Expo
+import React, { useEffect, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { auth } from '../firebaseConfig'; 
+import { onAuthStateChanged } from 'firebase/auth';
 
 export default function TabLayout() {
+  const [isLogged, setIsLogged] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setIsLogged(!!user);
+    });
+    return unsubscribe;
+  }, []);
+
   return (
     <Tabs
       screenOptions={{
-        headerShown: false, // Mantenemos limpio el diseño superior
-        tabBarActiveTintColor: '#6C5CE7', // Morado principal
-        tabBarInactiveTintColor: '#8E8E93', // Gris para lo no seleccionado
+        headerShown: false,
+        tabBarActiveTintColor: '#6C5CE7',
+        tabBarInactiveTintColor: '#8E8E93',
         tabBarStyle: {
-          backgroundColor: '#161618', // Fondo oscuro premium
+          backgroundColor: '#161618',
           borderTopWidth: 0,
           height: 65,
           paddingBottom: 10,
+          // La barra solo existe si el usuario inició sesión
+          display: isLogged ? 'flex' : 'none', 
         },
       }}>
       
